@@ -28,6 +28,9 @@ final class CompanyController extends Controller
 
     public function edit(Company $company)
     {
+        // Партнёр может открывать только свою карточку
+        abort_unless($company->id === Auth::user()->company?->id, 403);
+
         return Inertia::render('exponent/Companies/Edit', [
             'company' => $company,
         ]);
