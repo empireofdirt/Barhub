@@ -37,8 +37,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
 
-// Публичная отдача картинок в JPEG для Eventicious (их API не принимает webp/avif)
-Route::get('/integration-images/{image}.jpg', [IntegrationImageController::class, 'show'])
+// Публичная отдача картинок в JPEG для Eventicious (их API не принимает webp/avif).
+// Без расширения .jpg — иначе nginx перехватывает запрос как статику и не доходит до PHP.
+Route::get('/integration-images/{image}', [IntegrationImageController::class, 'show'])
     ->name('integration.image');
 
 Route::get('/exhibitions', UserExhibitionController::class)->name('exhibitions.index');
