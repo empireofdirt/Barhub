@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Image;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Imagick\Driver;
 use Intervention\Image\ImageManager;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -21,10 +22,14 @@ final class IntegrationImageController extends Controller
     {
         $disk = Storage::disk('public');
 
-        abort_unless($image->webp && $disk->exists($image->webp), 404);
+        // В БД webp хранится полным URL (Storage::url), а диску нужен
+        // относительный путь — вырезаем часть после /storage/.
+        $source = $this->relativePath($image->webp);
+
+        abort_unless($source && $disk->exists($source), 404);
 
         $jpgPath = "integration-jpg/{$image->id}.jpg";
-        $sourcePath = $disk->path($image->webp);
+        $sourcePath = $disk->path($source);
 
         $stale = !$disk->exists($jpgPath)
             || filemtime($sourcePath) > filemtime($disk->path($jpgPath));
@@ -41,5 +46,20 @@ final class IntegrationImageController extends Controller
         return response()->file($disk->path($jpgPath), [
             'Content-Type' => 'image/jpeg',
         ]);
+    }
+
+    /**
+     * Приводит хранимое значение (полный URL вида
+     * https://host/storage/uploads/...) к пути относительно public-диска.
+     */
+    private function relativePath(?string $stored): ?string
+    {
+        if (blank($stored)) {
+            return null;
+        }
+
+        $path = parse_url($stored, PHP_URL_PATH) ?: $stored;
+
+        return ltrim(Str::after($path, '/storage/'), '/');
     }
 }
